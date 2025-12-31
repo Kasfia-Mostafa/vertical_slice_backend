@@ -1,10 +1,10 @@
 // Load environment variables from .env file
-require('dotenv').config();
+require("dotenv").config();
 
 // Import required dependencies
-const express = require('express');  // Web framework for Node.js
-const { Pool } = require('pg');      // PostgreSQL client for database connections
-const cors = require('cors');         // Cross-Origin Resource Sharing middleware
+const express = require("express"); // Web framework for Node.js
+const { Pool } = require("pg"); // PostgreSQL client for database connections
+const cors = require("cors"); // Cross-Origin Resource Sharing middleware
 
 // Initialize Express application
 const app = express();
@@ -21,11 +21,14 @@ app.use(express.json());
  * Configuration is loaded from environment variables with fallback defaults.
  */
 const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',       // Database username
-  host: process.env.DB_HOST || 'localhost',      // Database server host
-  database: process.env.DB_DATABASE || 'uni_portal',  // Database name
-  password: process.env.DB_PASSWORD,             // Database password (no default for security)
-  port: process.env.DB_PORT || 5432,             // PostgreSQL default port
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_DATABASE,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
+  ssl: {
+    rejectUnauthorized: false, // Required for many cloud DB providers
+  },
 });
 
 /**
@@ -40,10 +43,10 @@ const pool = new Pool({
  *
  * Returns: Array of university objects matching the filter criteria
  */
-app.get('/', (req, res) => {
-  res.send('University Portal API is live and running!');
+app.get("/", (req, res) => {
+  res.send("University Portal API is live and running!");
 });
-app.get('/api/universities', async (req, res) => {
+app.get("/api/universities", async (req, res) => {
   try {
     // Extract filter parameters from query string
     const { maxFee, country, degree } = req.query;
@@ -65,9 +68,9 @@ app.get('/api/universities', async (req, res) => {
 
     // Prepare parameterized query values to prevent SQL injection
     const values = [
-      maxFee || 100000,           // $1: Default max fee if not provided
-      `%${country || ''}%`,       // $2: Wildcard pattern for ILIKE search
-      degree || ''                // $3: Empty string allows all degrees
+      maxFee || 100000, // $1: Default max fee if not provided
+      `%${country || ""}%`, // $2: Wildcard pattern for ILIKE search
+      degree || "", // $3: Empty string allows all degrees
     ];
 
     // Execute the parameterized query
@@ -102,14 +105,14 @@ app.get('/api/universities', async (req, res) => {
  * - Not Found (404): University doesn't exist
  * - Error (400/500): Validation or database errors
  */
-app.post('/api/apply', async (req, res) => {
+app.post("/api/apply", async (req, res) => {
   // Extract application data from request body
   const { studentName, email, universityId, gpa, ielts } = req.body;
 
   try {
     // Step 1: Retrieve university requirements from database for validation
     const uniCheck = await pool.query(
-      'SELECT name, min_gpa, min_ielts FROM universities WHERE id = $1',
+      "SELECT name, min_gpa, min_ielts FROM universities WHERE id = $1",
       [universityId]
     );
 
@@ -128,7 +131,7 @@ app.post('/api/apply', async (req, res) => {
     // Validate that student scores meet university minimum requirements
     if (numGPA < parseFloat(min_gpa) || numIELTS < parseFloat(min_ielts)) {
       return res.status(403).json({
-        message: `Application Rejected: Your scores do not meet the minimum requirements for ${name}.`
+        message: `Application Rejected: Your scores do not meet the minimum requirements for ${name}.`,
       });
     }
 
@@ -146,16 +149,17 @@ app.post('/api/apply', async (req, res) => {
     // Return success response with 201 (Created) status
     res.status(201).json({
       message: "Application submitted successfully!",
-      applicationId: newApp.rows[0].id
+      applicationId: newApp.rows[0].id,
     });
-
   } catch (err) {
     // Log error details for debugging
     console.error("Submission Error:", err.message);
 
     // Handle specific PostgreSQL numeric overflow error (22003)
-    if (err.code === '22003') {
-      return res.status(400).json({ message: "Score value too high for database limits." });
+    if (err.code === "22003") {
+      return res
+        .status(400)
+        .json({ message: "Score value too high for database limits." });
     }
 
     // Return generic database error for other exceptions
