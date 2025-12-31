@@ -26,11 +26,11 @@ const pool = new Pool({
   database: process.env.DB_DATABASE,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 5432,
-  ssl: {
-    rejectUnauthorized: false, // Required for many cloud DB providers
-  },
+  // Only use SSL if we are NOT on localhost
+  ssl: process.env.DB_HOST === 'localhost' || process.env.DB_HOST === '127.0.0.1'
+    ? false
+    : { rejectUnauthorized: false }
 });
-
 /**
  * TASK 2: Get Universities (Filtered by Fee, Country, and Degree)
  *
