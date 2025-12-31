@@ -40,6 +40,9 @@ const pool = new Pool({
  *
  * Returns: Array of university objects matching the filter criteria
  */
+app.get('/', (req, res) => {
+  res.send('University Portal API is live and running!');
+});
 app.get('/api/universities', async (req, res) => {
   try {
     // Extract filter parameters from query string
